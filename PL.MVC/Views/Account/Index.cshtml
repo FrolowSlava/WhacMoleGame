@@ -1,0 +1,143 @@
+﻿@model AccountViewModel;
+
+@{
+    ViewData["Title"] = "Account";
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/account.css" asp-append-version="true">
+}
+
+<main class="account">
+    <h1 class="account__title">Personal account</h1>
+    <div class="account__wrapper">
+        <div class="account__navigation">
+            <a asp-action="Index" asp-controller="Game" asp-area="Public" class="account__navigation-item" id="playButton">Play</a>
+            <div class="account__navigation-item active" data-acnavTab="1">Profile</div>
+            <div class="account__navigation-item" data-acnavTab="2">Games history</div>
+            @if (User.IsInRole("Developer"))
+            {
+                <div class="account__navigation-item" data-acnavTab="3">Admin</div>
+            }
+            <a asp-action="Logout" asp-controller="Account" asp-area="Public" class="account__navigation-item" id="logoutLink">Logout</a>
+        </div>
+        <div class="account__content">
+            <div class="account__info account__info--display account__info--opacity" data-infnavTab="1">
+                <div class="subtitle">Profile</div>
+                <div class="account__profile">
+                    <p>Number of games played: <span id="gamesPlayed">@Model.CountGames</span></p>
+                    <p>Win/loss statistics: <span id="winsLosses">@Model.CountWins/@(Model.CountGames - Model.CountWins)</span></p>
+                    <p>The maximum number of points scored: <span id="highestScore">@Model.MaxPointsCount</span></p>
+                    <form id="profileForm">
+                        <label for="login">Login:</label>
+                        <input type="text" id="Login" name="login" asp-for="User.Login" required>
+                        <label for="password">Password:</label>
+                        <input type="text" id="Password" name="password" placeholder="********" readonly>
+                        <label for="email">Email:</label>
+                        <input type="email" id="Email" name="email" asp-for="User.Email" required>
+                        <label for="phone">Phone number:</label>
+                        <input type="text" id="PhoneNumber" placeholder="+7 (___) ___-__-__" name="phone" asp-for="User.PhoneNumber" required>
+                        <button type="submit">Save</button>
+                    </form>
+                </div>
+            </div>
+            <div class="account__info" data-infnavTab="2" id="gameHistory">
+                <button id="createGameButton" class="btn-create-game" v-on:click="showModal = true">Create game</button>
+                <div class="subtitle">Games history</div>
+                <select id="gameFilter" asp-items="Html.GetEnumSelectList<GamesFilter>()" v-model="gamesFilter" v-on:change="updateGames" class="custom-select"></select>
+                <div class="account__history">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th class="text-center">Id</th>
+                                <th class="text-center">Game name</th>
+                                <th class="text-center">Game start date</th>
+                                <th class="text-center">End date of the game</th>
+                                <th class="text-center">Winner</th>
+                                <th class="text-center">Max points count</th>
+                                <th class="text-center">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="game in games" :key="game.id">
+                                <td class="text-center">{{ game.id }}</td>
+                                <td class="text-center">{{ game.name }}</td>
+                                <td class="text-center">{{ game.gameStartTime }}</td>
+                                <td class="text-center">{{ game.gameEndTime || '' }}</td>
+                                <td class="text-center">{{ game.winner ? game.winner.login : '' }}</td>
+                                <td class="text-center">{{ game.maxPointsCount || '' }}</td>
+                                <td class="text-center">
+                                    <a v-if="!game.gameEndTime"
+                                       :href="'/Game/JoinGame?gameId=' + game.id"
+                                       class="btn-join-game">Join</a>
+                                    <p v-if="game.gameEndTime">Game over</p>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <div class="pagination">
+                        <button v-if="currentPage > 1" v-on:click="goToPage(currentPage - 1)">Previous</button>
+                        <span v-for="page in getPaginationRange()" :key="page">
+                            <button v-if="page !== '...'" v-on:click="goToPage(page)" :class="{ active: page === currentPage }">{{ page }}</button>
+                            <span v-else>...</span>
+                        </span>
+                        <button v-if="currentPage < totalPages" v-on:click="goToPage(currentPage + 1)">Next</button>
+                    </div>
+                </div>
+                <div v-if="showModal" class="modal-overlay">
+                    <div class="modal-content">
+                        <h2>Create a New Game</h2>
+                        <label for="gameName">Game name:</label>
+                        <input type="text" id="gameName" v-model="newGameName" class="modal-input" />
+                        <div class="modal-buttons">
+                            <button class="modal-btn-create" v-on:click="createGame">Create</button>
+                            <button class="modal-btn-cancel" v-on:click="showModal = false">Cancel</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="account__info" data-infnavTab="3" id="adminUsers">
+                <div class="subtitle">Admin</div>
+                <div class="account__admin">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th class="text-center">Id</th>
+                                <th class="text-center">Login</th>
+                                <th class="text-center">Email</th>
+                                <th class="text-center">Phone number</th>
+                                <th class="text-center">Registration Date</th>
+                                <th class="text-center">Is blocked</th>
+                                <th class="text-center">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="user in users" :key="user.id">
+                                <td class="text-center">{{ user.id }}</td>
+                                <td class="text-center">{{ user.login }}</td>
+                                <td class="text-center">{{ user.email }}</td>
+                                <td class="text-center">{{ user.phoneNumber }}</td>
+                                <td class="text-center">{{ user.registrationDate }}</td>
+                                <td class="text-center">{{ user.isBlocked }}</td>
+                                <td class="text-center block-button" v-if="!user.isBlocked" v-on:click="Block(user.id)">Block</td>
+                                <td class="text-center unblock-button" v-if="user.isBlocked" v-on:click="Unblock(user.id)">Unblock</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <div class="pagination">
+                        <button v-if="currentPage > 1" v-on:click="goToPage(currentPage - 1)">Previous</button>
+                        <span v-for="page in getPaginationRange()" :key="page">
+                            <button v-if="page !== '...'" v-on:click="goToPage(page)" :class="{ active: page === currentPage }">{{ page }}</button>
+                            <span v-else>...</span>
+                        </span>
+                        <button v-if="currentPage < totalPages" v-on:click="goToPage(currentPage + 1)">Next</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+
+@section Scripts {
+    <script defer src="~/js/account.js" asp-append-version="true"></script>
+}

@@ -1,0 +1,77 @@
+﻿@{
+    ViewData["Title"] = "Home";
+}
+
+<main class="container">
+    <section class="game-info">
+        <div>
+            <h1>Whack-a-Mole</h1>
+            <p>
+                Welcome to Whack-a-Mole! This exciting game will test your reflexes as you try to whack as many moles as possible before time runs out.
+                Can you get the highest score?
+            </p>
+            <div class="video-wrapper">
+                <div class="video-thumbnail" style="position: relative;">
+                    <video class="hero__img" controls poster="/img/mario-bg.jpg" style="width: 100%;">
+                        <source src="/videos/AboutGame.mp4" type="video/mp4" />
+                        Your browser does not support the video tag.
+                    </video>
+                </div>
+            </div>
+            <a asp-controller="Account" asp-action="Index" class="btn-play">Play</a>
+        </div>
+        <div id="feedback">
+            <div class="reviews-section">
+                <h2>Leave Your Review</h2>
+                <div class="textbox">
+                    <input type="text" name="reviewerName" placeholder="Your Name" v-model="newReview.Title">
+                </div>
+                <div class="textbox">
+                    <textarea name="reviewContent" placeholder="Your Review" rows="5" v-model="newReview.Description"></textarea>
+                </div>
+                <div class="stars-rating">
+                    <label for="rating">Your Rating:</label>
+                    <input type="hidden" id="ratingValue" name="rating" value="5" v-model="newReview.CountStars">
+                    <span class="stars-form">
+                        <i v-for="n in 5"
+                           :key="n"
+                           :class="['star-form', { active: newReview.CountStars >= n }]"
+                           v-on:click="setRating(n)">
+                            {{ newReview.CountStars >= n ? '⭐' : '☆' }}
+                        </i>
+                    </span>
+                </div>
+                <button type="submit" class="btn-register-blue" v-on:click="submitReview">Submit Review</button>
+            </div>
+
+            <div class="swiper-container">
+                <h2>What Players Say</h2>
+                <div class="swiper-wrapper">
+                    <div class="swiper-slide" v-for="feedback in feedbacks" :key="feedback.id">
+                        <div class="review-content">
+                            <p>{{ feedback.title }}</p>
+                            <p>"{{ feedback.description }}"</p>
+                            <div class="stars">
+                                <span v-for="n in feedback.countStars" :key="n">⭐</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </section>
+</main>
+
+@section Scripts {
+    <script defer src="~/js/feedback.js" asp-append-version="true"></script>
+
+    <script>
+        document.getElementById('videoThumbnail').addEventListener('click', function () {
+            document.getElementById('videoThumbnail').style.display = 'none';
+            var video = document.getElementById('youtubeVideo');
+            video.src = "https://www.youtube.com/embed/FwZdvZKTWCI?autoplay=1";
+            video.style.display = 'block';
+        });
+    </script>
+}
